@@ -1,0 +1,353 @@
+{
+  "name": "ChatWithCGRER",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -592,
+        -400
+      ],
+      "id": "50a64a02-99c7-4261-a811-e2a1c614e851",
+      "name": "When chat message received",
+      "webhookId": "e294c52d-eb5b-4241-a22b-eb29d1476925"
+    },
+    {
+      "parameters": {
+        "path": "84381a0d-d1cc-4213-be75-d4cb5f69f35d",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -592,
+        -192
+      ],
+      "id": "42db39bf-02b7-4696-b477-de06e774fbff",
+      "name": "Webhook",
+      "webhookId": "84381a0d-d1cc-4213-be75-d4cb5f69f35d"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f666e106-47da-4bfb-a045-8da9d96c2b62",
+              "name": "=chatInput",
+              "value": "={{ $json?.chatInput || $json.body.chatInput }}",
+              "type": "string"
+            },
+            {
+              "id": "bcb8271e-d2c7-4abb-b025-2c4afded22ad",
+              "name": "sessionId",
+              "value": "={{ $json?.sessionId || $json.body.sessionId}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -368,
+        -288
+      ],
+      "id": "a5c6bbce-5212-473a-8027-88afd89f82b1",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "mode": "load",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "cgrer",
+          "mode": "list",
+          "cachedResultName": "cgrer"
+        },
+        "prompt": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        256,
+        -288
+      ],
+      "id": "be963397-6442-4ff2-b86c-bae176654bb5",
+      "name": "Qdrant Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "0faV2VciXw5yhVm0",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        224,
+        -48
+      ],
+      "id": "dbd0f59a-c311-44a1-aeb8-7b86f47e023b",
+      "name": "Embeddings Ollama1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "SJcXaffYWpFe8hw8",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      context: $input.all().map((item, i) => \n        `[Source: ${item.json.document.metadata.source}, Section: ${item.json.document.metadata.section}]:\n${item.json.document.pageContent}`\n      ).join(\"\\n---------------------------------\\n\")\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        -288
+      ],
+      "id": "0917d399-829f-4c0c-ba1e-3648a2e491c6",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Question utilisateur :\n{{ $('Edit Fields').first().json.chatInput }}\n\nContexte extrait du corpus :\n{{ $json[\"context\"] }}",
+        "options": {
+          "systemMessage": "=Vous êtes un assistant spécialisé en droit social et accords d'entreprise. Votre rôle est de répondre aux questions de l'utilisateur en vous basant uniquement sur les extraits de texte qui vous sont fournis.\n\nInstructions :\n\n1. Analysez la question de l'utilisateur et les extraits de contexte.\n\n2. Rédigez en français une réponse claire et concise en synthétisant les informations pertinentes trouvées. Ne citez pas les sources dans le corps de la réponse.\n\n3. Si les extraits ne contiennent pas la réponse, indiquez que l'information n'est pas disponible dans les documents fournis. Ne générez aucune information qui ne figure pas dans le contexte.\n\n4. Une fois la réponse rédigée, créez une nouvelle section intitulée \"La réponse a été formulée à partir des éléments suivants :\".\n\n5. Dans cette nouvelle section, listez les sources que vous avez utilisées pour formuler votre réponse, en utilisant le format suivant pour chaque référence : \"- [Nom du document] section [Nom de la section]"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        816,
+        -288
+      ],
+      "id": "859dc6bd-0187-4fdd-be51-f897f77a6135",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": "mistral:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        736,
+        -32
+      ],
+      "id": "f5c16e65-cc90-4345-a385-84b64dd84901",
+      "name": "Ollama Chat Model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "SJcXaffYWpFe8hw8",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        912,
+        -32
+      ],
+      "id": "c0a48bcc-c8a9-406d-bc9f-dab187c17033",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1168,
+        -288
+      ],
+      "id": "787159c3-0941-4290-a1d2-f74829048ad5",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Vous êtes un expert en reformulation de requêtes pour la recherche sémantique. Votre tâche est de prendre la question d'un utilisateur et de la transformer en une requête de recherche concise et optimisée pour une base de données vectorielle. L'objectif est de trouver les documents les plus pertinents. La requête reformulée doit être claire, sans détails inutiles et cibler directement le concept principal. Ne posez pas de questions et ne donnez pas d'explications supplémentaires. Fournissez uniquement la requête reformulée en français.\n\nExemple 1 :\n\nQuestion de l'utilisateur : \"Quel est le montant des primes d'ancienneté prévues par l'accord d'entreprise pour les employés ayant plus de 10 ans de service ?\"\n\nRequête optimisée : \"Primes ancienneté employés plus 10 ans service.\"\n\nExemple 2 :\n\nQuestion de l'utilisateur : \"Comment sont gérés les congés payés pour les salariés à temps partiel ? Y a-t-il des règles spécifiques ?\"\n\nRequête optimisée : \"Congés payés gestion salariés temps partiel règles.\"\n\nExemple 3 :\n\nQuestion de l'utilisateur : \"Je cherche des informations sur les conditions de départ à la retraite anticipée et les dispositifs de fin de carrière pour les salariés.\"\n\nRequête optimisée : \"Retraite anticipée conditions dispositifs fin carrière.\"\n\nExemple 4 :\n\nQuestion de l'utilisateur : \"Y a-t-il des dispositions sur le droit à la déconnexion et le remboursement des frais liés au télétravail ?\"\n\nRequête optimisée : \"Droit déconnexion remboursement frais télétravail.\"\n\n\nMaintenant, reformulez la question suivante de l'utilisateur :\n\n{{ $json.chatInput }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -128,
+        -288
+      ],
+      "id": "e2a247ac-2593-4204-8d43-0d8e8e327743",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        -48
+      ],
+      "id": "23aa968a-4958-4c0f-ba53-284280d9e1f5",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "SJcXaffYWpFe8hw8",
+          "name": "Ollama account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6699b757-bfa2-4bc6-a985-2fe0c6564d38",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "adc68ef3ac573a33c38f2ee0c5423e7a8717579ae5d03ab38928f79dd334cdad"
+  },
+  "id": "ZFWGevUBo860kNBH",
+  "tags": []
+}
