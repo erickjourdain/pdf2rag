@@ -13,10 +13,11 @@ if __name__ == "__main__":
     url_qdrant = "http://192.168.1.70:6333/"
     collection_name = "cgrer"
     pdf_dir = "./doc/data"
-    pdf_files = [os.path.join(pdf_dir, f) for f in os.listdir(pdf_dir) if f.lower().endswith(".pdf")]
 
-    if not pdf_files:
-        print("Aucun fichier PDF trouvé dans le répertoire ./doc/data")
+    files = [os.path.join(pdf_dir, f) for f in os.listdir(pdf_dir) if f.lower().endswith(".pdf") or f.lower().endswith(".md")]
+
+    if not files:
+        print("Aucun fichier PDF ou Markdown trouvé dans le répertoire ./doc/data")
         sys.exit(1)
 
     ollama = OllamaClient(url=url_ollama)
@@ -29,16 +30,24 @@ if __name__ == "__main__":
     else:
         print(f"La collection '{collection_name}' existe déjà dans Qdrant.")
 
-    for pdf_file_path in pdf_files:
-        print(f"--------------------\nTraitement du fichier: {pdf_file_path}")
-        file_name = os.path.basename(pdf_file_path)
-        # Convert PDF to Markdown
-        print("Conversion du PDF en Markdown...")
-        start_time = time.time()
-        md_str = pdf2md(pdf_file_path)
-        end_time = time.time() - start_time
-        print(f"La conversion en Markdown a pris {end_time:.2f} seconds")
-
+    for file_path in files:
+        print(f"--------------------\nTraitement du fichier: {file_path}")
+        file_name = os.path.basename(file_path)
+        if file_path.lower().endswith(".pdf"):
+            # Convert PDF to Markdown
+            print("Conversion du PDF en Markdown...")
+            start_time = time.time()
+            md_str = pdf2md(file_path)
+            end_time = time.time() - start_time
+            print(f"La conversion en Markdown a pris {end_time:.2f} seconds")
+        elif file_path.lower().endswith(".md"):
+            print("Lecture du fichier Markdown...")
+            with open(file_path, "r", encoding="utf-8") as f:
+                md_str = f.read()
+        else:
+            print(f"Format de fichier non supporté pour {file_name}, saut du fichier.")
+            continue
+        
         print("Nettoyage et découpage du Markdown...")
         md_preprocessor = MarkdownPreprocessor(chunk_size=1000, overlap=100)
         chunks = md_preprocessor.process(md_str, source=file_name)
